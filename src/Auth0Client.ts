@@ -96,6 +96,7 @@ import {
 
 // @ts-ignore
 import TokenWorker from './worker/token.worker.ts';
+import { sendMessage } from './worker/worker.utils';
 import { singlePromise, retryPromise } from './promise-utils';
 import { CacheKeyManifest } from './cache/key-manifest';
 import {
@@ -1246,6 +1247,15 @@ export class Auth0Client {
     this.userCache.remove(CACHE_KEY_ID_TOKEN_SUFFIX);
 
     await this.dpop?.clear();
+
+    if (this.worker) {
+      try {
+        await sendMessage({ type: 'clear' }, this.worker);
+      } catch {
+        // Worker is an internal, best-effort cleanup channel. If the ACK round-trip
+        // fails we still proceed with logout so the user is not left in a half-state.
+      }
+    }
 
     const url = this._buildLogoutUrl(logoutOptions);
 
